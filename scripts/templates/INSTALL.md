@@ -15,7 +15,7 @@ curl -fsSL '@@BASE@@/install.sh' | bash
 Run in PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing '@@BASE@@/install.ps1').Content)) -Action install
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing '@@BASE@@/install.ps1').RawContentStream.ToArray()))) -Action install
 ```
 
 The installers download a private Node.js runtime from nodejs.org and check its checksum, along with the release ZIP. You do not need to install Node.js separately. Review the scripts before running them if you prefer.

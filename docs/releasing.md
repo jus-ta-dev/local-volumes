@@ -20,8 +20,8 @@ After reviewing and committing the source, push `main` and a matching `v` tag:
 
 ```sh
 git push origin main
-git tag v0.1.0-beta.5
-git push origin v0.1.0-beta.5
+git tag v0.1.0-beta.6
+git push origin v0.1.0-beta.6
 ```
 
 The GitHub workflow runs tests and release checks on macOS and Windows. Both jobs must succeed before publishing. A tag containing a hyphen creates a prerelease; a stable version creates a regular release. The tag must match `package.json`.

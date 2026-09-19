@@ -6,7 +6,7 @@ Local Volumes adds group volume controls to Discord desktop. Put people into gro
 
 Free for noncommercial use. Windows and macOS beta.
 
-[Download beta 5](https://github.com/AdstraliaDev1/local-volumes/releases/tag/v0.1.0-beta.5) · [Report a bug](https://github.com/AdstraliaDev1/local-volumes/issues) · [License](LICENSE)
+[Download beta 6](https://github.com/AdstraliaDev1/local-volumes/releases/tag/v0.1.0-beta.6) · [Report a bug](https://github.com/AdstraliaDev1/local-volumes/issues) · [License](LICENSE)
 
 ## What it does
 
@@ -30,7 +30,7 @@ Fully quit Discord first, including its system-tray icon on Windows. Reopen it a
 Open **PowerShell** as your normal user and run:
 
 ```powershell
-& ([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.5/install.ps1').Content)) -Action install
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.6/install.ps1').RawContentStream.ToArray()))) -Action install
 ```
 
 ### macOS
@@ -38,7 +38,7 @@ Open **PowerShell** as your normal user and run:
 Open **Terminal** and run:
 
 ```sh
-curl -fsSL 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.5/install.sh' | bash
+curl -fsSL 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.6/install.sh' | bash
 ```
 
 No separate Node.js installation, administrator rights, or PowerShell execution-policy changes are needed. The installers download the release from GitHub and a private Node.js runtime from nodejs.org, then verify their checksums. You can inspect the scripts and download the ZIP yourself from [Releases](https://github.com/AdstraliaDev1/local-volumes/releases).
