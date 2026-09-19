@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "builds": [
+    {
+      "platform": "darwin",
+      "channel": "stable",
+      "hostVersion": "0.0.412",
+      "hostSha256": "904c0efc5ca9593af82ce80a7c0799f1dd0e68e82516b18cd34b216e0667f954",
+      "coreSha256": "8c37b8d7a86e748bd6085b3200c948e23b05e55f98f7b8b8fb0ef5d129a01fca",
+      "entrySha256": "0932c80d20ec9893c1068949de54d78a11443979fe4bd476f26c63ec5cdf579a"
+    }
+  ],
+  "experimentalWindows": true
+}

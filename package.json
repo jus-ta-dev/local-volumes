@@ -1,0 +1,23 @@
+{
+  "name": "local-volumes",
+  "version": "0.1.0-beta.5",
+  "private": true,
+  "description": "Local Discord voice volume groups with a reversible per-user installer",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "release": "npm run check && npm test && npm run build && node scripts/package-release.mjs && node scripts/check-release.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.1",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AdstraliaDev1/local-volumes.git"
+  }
+}
