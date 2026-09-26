@@ -6,7 +6,9 @@ Local Volumes adds group volume controls to Discord desktop. Put people into gro
 
 Free for noncommercial use. Windows and macOS beta.
 
-[Download beta 6](https://github.com/AdstraliaDev1/local-volumes/releases/tag/v0.1.0-beta.6) · [Report a bug](https://github.com/AdstraliaDev1/local-volumes/issues) · [License](LICENSE)
+[Project website](https://just-a.dev/local-volumes/) · [Download beta 6](https://github.com/jus-ta-dev/local-volumes/releases/tag/v0.1.0-beta.6) · [Report a bug](https://github.com/jus-ta-dev/local-volumes/issues) · [License](LICENSE)
+
+Beta 6 fixes the Windows PowerShell install command for downloads from GitHub Releases. The project now lives under the [jus-ta-dev GitHub account](https://github.com/jus-ta-dev).
 
 ## What it does
 
@@ -30,7 +32,7 @@ Fully quit Discord first, including its system-tray icon on Windows. Reopen it a
 Open **PowerShell** as your normal user and run:
 
 ```powershell
-& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.6/install.ps1').RawContentStream.ToArray()))) -Action install
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.6/install.ps1').RawContentStream.ToArray()))) -Action install
 ```
 
 ### macOS
@@ -38,10 +40,12 @@ Open **PowerShell** as your normal user and run:
 Open **Terminal** and run:
 
 ```sh
-curl -fsSL 'https://github.com/AdstraliaDev1/local-volumes/releases/download/v0.1.0-beta.6/install.sh' | bash
+curl -fsSL 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.6/install.sh' | bash
 ```
 
-No separate Node.js installation, administrator rights, or PowerShell execution-policy changes are needed. The installers download the release from GitHub and a private Node.js runtime from nodejs.org, then verify their checksums. You can inspect the scripts and download the ZIP yourself from [Releases](https://github.com/AdstraliaDev1/local-volumes/releases).
+No separate Node.js installation, administrator rights, or PowerShell execution-policy changes are needed. The installers download the release from GitHub and a private Node.js runtime from nodejs.org, then verify their checksums. You can inspect the scripts and download the ZIP yourself from [Releases](https://github.com/jus-ta-dev/local-volumes/releases).
+
+The published beta 6 installers predate the account rename and still use the former GitHub path internally. GitHub currently redirects that path to this repository. A new versioned release is needed to remove it from the installer assets.
 
 ### Supported clients
 
@@ -111,4 +115,4 @@ This runs type checking, tests, builds the bundles, and verifies the release ass
 
 [PolyForm Noncommercial 1.0.0](LICENSE). You may use, modify, and share Local Volumes for permitted noncommercial purposes, subject to the license. Commercial use is not granted by this license.
 
-Made by [AdstraliaDev1 / jus_ta_dev](https://github.com/AdstraliaDev1).
+Made by [jus_ta_dev](https://github.com/jus-ta-dev).

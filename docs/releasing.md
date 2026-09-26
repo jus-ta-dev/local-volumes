@@ -1,6 +1,6 @@
 # Release maintenance
 
-Release downloads are hosted on GitHub at `AdstraliaDev1/local-volumes`. The website can link to them without storing installer files.
+Release downloads are hosted on GitHub at `jus-ta-dev/local-volumes`. The website can link to them without storing installer files.
 
 ## Prepare
 
