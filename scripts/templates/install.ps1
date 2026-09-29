@@ -42,7 +42,7 @@ try {
     Get-LvDownload "https://nodejs.org/dist/v$LvNodeVersion/$LvNodeName.zip" (Join-Path $LvWork 'node.zip') $LvNodeSha
     Expand-Archive -LiteralPath (Join-Path $LvWork 'node.zip') -DestinationPath $LvWork
     & (Join-Path $LvWork "$LvNodeName/node.exe") (Join-Path $LvWork 'package/setup.cjs') $Action
-    if ($LASTEXITCODE -ne 0) { throw 'Local Volumes did not complete. See the compatibility or recovery message above.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Local Volumes did not complete. See the installation or recovery message above.' }
     if ($Action -eq 'install') { Write-Host 'Installed. Restart Discord. Keep the LocalVolumes folder for uninstall and settings.' }
 } finally {
     $ProgressPreference = $LvPreviousProgressPreference

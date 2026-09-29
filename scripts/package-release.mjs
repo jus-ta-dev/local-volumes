@@ -45,9 +45,6 @@ for (const name of ["bootstrap.cjs", "renderer.js", "setup.cjs", "LICENSE"]) {
   files[name] = sha(bytes);
   writeFileSync(join(payload, name), bytes);
 }
-const compatibility = JSON.parse(
-  readFileSync("release/compatibility.json", "utf8"),
-);
 writeFileSync(
   join(payload, "manifest.json"),
   JSON.stringify(
@@ -55,8 +52,6 @@ writeFileSync(
       schema: 1,
       version,
       files,
-      builds: compatibility.builds,
-      experimentalWindows: compatibility.experimentalWindows,
     },
     null,
     2,

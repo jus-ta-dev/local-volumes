@@ -2,7 +2,7 @@
 
 Local Volumes is an unofficial Discord desktop modification. It changes one external desktop-core entry and loads local JavaScript. It depends on private Discord interfaces, so compatibility may change without notice.
 
-The installer requires Discord to be closed, checks the original loader, creates a verified backup, and refuses changed files during uninstall. macOS uses an explicit compatibility hash list; Windows accepts only the stock Stable forwarding loader under its experimental policy. The installer does not disable Electron security settings, change PowerShell execution policies, or request administrator access.
+The installer requires Discord to be closed, checks the original loader, creates a verified backup, and refuses changed files during uninstall. macOS and Windows accept the stock Stable forwarding loader without Discord version or build-hash restrictions. After updates, reinstalling retires the previous hook and keeps its receipt and backup. Installation does not verify compatibility with Discord's private voice interfaces. The installer does not disable Electron security settings, change PowerShell execution policies, or request administrator access.
 
 Release ZIPs and the private Node.js runtime are checksum-pinned in the installer scripts. These checks detect changed downloads, but the initial script must still be trusted. Review a release before running it. User-writable local files are not a security boundary against another process already running as the same user.
 

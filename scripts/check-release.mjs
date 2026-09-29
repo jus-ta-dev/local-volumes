@@ -53,7 +53,7 @@ assert.equal(
   manifest.version,
   JSON.parse(readFileSync("package.json", "utf8")).version,
 );
-assert.equal(manifest.experimentalWindows, true);
+assert.deepEqual(Object.keys(manifest).sort(), ["files", "schema", "version"]);
 for (const [name, expected] of Object.entries(manifest.files))
   assert.equal(members[name], expected);
 assert.equal(members.LICENSE, sha(readFileSync("LICENSE")));

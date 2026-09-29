@@ -10,7 +10,7 @@ Fully quit Discord before installing or updating. On Windows, quit it from the s
 curl -fsSL '@@BASE@@/install.sh' | bash
 ```
 
-## Windows (experimental)
+## Windows
 
 Run in PowerShell:
 
@@ -28,7 +28,7 @@ Group percentages set absolute Discord volume levels. A person normally at 50% p
 
 ## Update
 
-Fully quit Discord and run the install command from the new release. Existing installer-based groups and shortcuts are kept. Updates are manual.
+Fully quit Discord and run the install command from the new release. If a Discord update removes Local Volumes, rerun the same installer. The installer selects the current Discord installation, retires the previous hook when it is still present, and keeps your groups, shortcuts and backups. Updates are manual.
 
 ## Uninstall
 
@@ -50,10 +50,10 @@ This restores the original loader when it still matches the installed modificati
 
 ## Compatibility and troubleshooting
 
-- macOS supports only the inspected Discord Stable 0.0.412 host and core hashes.
-- Windows x64 and ARM64 support is experimental and requires the stock Discord Stable desktop-core loader.
+- macOS and Windows x64/ARM64 use Discord Stable's stock desktop-core loader.
+- Discord versions and build hashes do not restrict installation. The mixer may need an update if Discord changes its voice controls.
 - Linux, browser, mobile, PTB/Canary and other client mods are not supported.
-- If compatibility checks fail, do not bypass them. Report the error and Discord version.
+- Other mods and unrecognized loaders are preserved. Report the loader error instead of overwriting changed files.
 - Replace `-Action install` with `-Action diagnose` on Windows, or pipe the Mac script to `bash -s -- diagnose`, for a read-only version and file-hash report.
 
 Checksums detect changed downloads; they are not publisher signatures. This is an unofficial Discord client modification. Discord updates may break it, and client modifications may violate Discord's terms.

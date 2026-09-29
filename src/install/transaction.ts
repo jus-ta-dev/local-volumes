@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import {
   lstatSync,
+  existsSync,
   readFileSync,
   writeFileSync,
   mkdirSync,
-  existsSync,
 } from "node:fs";
 import { dirname, join, isAbsolute } from "node:path";
 import { assertPlainPath, atomicWrite as atomic } from "../files.ts";
@@ -57,21 +57,22 @@ export function install(
   assertPlainPath(receiptPath);
   const current = readFileSync(target, "utf8");
   const previous = readReceipt(receiptPath);
-  if (previous) {
-    if (previous.target !== target)
-      throw new Error("Receipt belongs to a different Discord entry.");
-    if (
-      hash(current) === previous.patchedHash &&
-      previous.status !== "uninstalled"
-    )
-      return previous;
-    if (hash(current) !== previous.originalHash)
-      throw new Error(
-        "Discord entry changed. No automatic repair or overwrite.",
-      );
-  }
+  if (
+    previous?.target === target &&
+    hash(current) === previous.patchedHash &&
+    previous.status !== "uninstalled"
+  )
+    return previous;
   if (hash(current) !== expected)
     throw new Error("Unrecognized Discord entry; refusing to modify it.");
+  const moved = previous && previous.target !== target;
+  if (moved && existsSync(previous.target)) {
+    const oldHash = hash(readFileSync(previous.target));
+    if (![previous.originalHash, previous.patchedHash].includes(oldHash))
+      throw new Error(
+        "Previous Discord entry changed; refusing to overwrite it during reinstall.",
+      );
+  }
   const patch = `// Local Volumes\ntry { require(${JSON.stringify(bootstrap)}); } catch { console.warn('[Local Volumes] Could not load; starting Discord normally.'); }\n${current}`;
   const receipt: Receipt = {
     version: 1,
@@ -93,9 +94,25 @@ export function install(
     writeFileSync(backup, current, { mode: 0o600, flag: "wx" });
   if (hash(readFileSync(backup)) !== receipt.originalHash)
     throw new Error("Backup verification failed.");
-  atomic(receiptPath, JSON.stringify(receipt, null, 2) + "\n", 0o600);
   if (hash(readFileSync(target)) !== receipt.originalHash)
     throw new Error("Entry changed while preparing installation.");
+  if (previous && (moved || previous.originalHash !== receipt.originalHash)) {
+    // Retain the old receipt as well as its original-loader backup after updates.
+    const history = readFileSync(receiptPath);
+    const archived = join(
+      dirname(receiptPath),
+      `${hash(history)}.install.json.backup`,
+    );
+    assertPlainPath(archived);
+    if (!existsSync(archived))
+      writeFileSync(archived, history, { mode: 0o600, flag: "wx" });
+    if (hash(readFileSync(archived)) !== hash(history))
+      throw new Error("Previous installation receipt backup verification failed.");
+    if (moved) uninstall(receiptPath);
+  }
+  if (hash(readFileSync(target)) !== receipt.originalHash)
+    throw new Error("Entry changed while preparing installation.");
+  atomic(receiptPath, JSON.stringify(receipt, null, 2) + "\n", 0o600);
   atomic(target, patch, receipt.mode);
   receipt.status = "installed";
   atomic(receiptPath, JSON.stringify(receipt, null, 2) + "\n", 0o600);
@@ -104,6 +121,11 @@ export function install(
 export function uninstall(receiptPath: string): string {
   const receipt = readReceipt(receiptPath);
   if (!receipt) return "No installation receipt.";
+  if (!existsSync(receipt.target)) {
+    receipt.status = "uninstalled";
+    atomic(receiptPath, JSON.stringify(receipt, null, 2) + "\n", 0o600);
+    return "Discord entry was removed by an update. Settings and backups have been kept.";
+  }
   const currentHash = hash(readFileSync(receipt.target));
   if (currentHash !== receipt.originalHash) {
     if (currentHash !== receipt.patchedHash)

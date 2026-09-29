@@ -59,6 +59,36 @@ test("uninstall never overwrites a changed Discord entry", () => {
   }
 });
 
+test("moving installation rejects changed old or new loaders without removing the previous hook", () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "lv-move-")));
+  try {
+    const old = join(root, "old-index.js"), next = join(root, "new-index.js"),
+      receipt = join(root, "install.json");
+    writeFileSync(old, "original");
+    writeFileSync(next, "next original");
+    install(old, "/local/bootstrap.cjs", receipt, hash("original"));
+    const oldPatch = readFileSync(old, "utf8"), history = readFileSync(receipt, "utf8");
+    writeFileSync(next, "another mod");
+    assert.throws(
+      () => install(next, "/local/bootstrap.cjs", receipt, hash("next original")),
+      /Unrecognized Discord entry/,
+    );
+    assert.equal(readFileSync(old, "utf8"), oldPatch);
+    assert.equal(readFileSync(receipt, "utf8"), history);
+    writeFileSync(next, "next original");
+    writeFileSync(old, "changed old entry");
+    assert.throws(
+      () => install(next, "/local/bootstrap.cjs", receipt, hash("next original")),
+      /Previous Discord entry changed/,
+    );
+    assert.equal(readFileSync(old, "utf8"), "changed old entry");
+    assert.equal(readFileSync(next, "utf8"), "next original");
+    assert.equal(readFileSync(receipt, "utf8"), history);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("invalid receipts cannot bypass validation in direct install or uninstall", () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "lv-receipt-")));
   try {

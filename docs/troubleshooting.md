@@ -2,15 +2,15 @@
 
 ## The mixer does not open
 
-Fully quit and reopen Discord after installation or an update. A page reload does not reload the desktop bootstrap. Join voice and try Command+Shift+L on macOS or Ctrl+Shift+L on Windows. The shortcut works only while Discord is focused.
+Fully quit and reopen Discord after installation. A page reload does not reload the desktop bootstrap. If Local Volumes disappears after a Discord update, fully quit Discord and rerun the installer. It installs into the current Discord version while keeping your saved groups and shortcuts. Join voice and try Command+Shift+L on macOS or Ctrl+Shift+L on Windows. The shortcut works only while Discord is focused.
 
 Discord's native menus can change. If the menu entry disappears, use the shortcut. If discovery fails, use Retry after joining voice. An unsupported client may need a new Local Volumes release.
 
 ## Installation stops
 
-Close all Discord processes first. The installer will not terminate them for you. Unsupported client versions, another mod, changed files, and invalid checksums stop installation.
+Close all Discord processes first. The installer will not terminate them for you. Discord versions do not restrict installation. Another mod, an unrecognized loader, changed files during installation, and invalid download checksums stop installation.
 
-Download the matching install script from the release and use `bash ./install.sh diagnose` on macOS. On Windows, use the README command with `-Action diagnose` instead of `-Action install`. Diagnosis reads Discord versions and file hashes without patching. Never bypass a failed compatibility check.
+Download the matching install script from the release and use `bash ./install.sh diagnose` on macOS. On Windows, use the README command with `-Action diagnose` instead of `-Action install`. Diagnosis reads Discord versions and file hashes without patching. The `check` command checks the loader and release files; it does not certify that Discord's internal voice controls work with the mixer.
 
 An interrupted installer can leave an `.install-lock` directory. Confirm that no installer is running before removing that lock alone. Keep the receipt and backup files.
 
@@ -39,4 +39,4 @@ The release installer stores files here:
 
 Back up `state/groups.json` with Discord closed before editing it. Corrupt settings are left untouched and the mixer blocks editing. Do not delete installation receipts or the only original-entry backup before successful uninstall.
 
-The early development installer stored state in the source checkout's `.local-volumes` directory. That installation must be removed using its original uninstaller before switching to a release installer. Keep the old checkout or its backup until removal succeeds. With Discord closed, you may then copy its `groups.json` into the release installation's `state` directory.
+The early development installer stored state in the source checkout's `.local-volumes` directory. Remove that installation using its original uninstaller before switching to a release installer. If Discord already deleted the old loader, the uninstaller can retire the receipt without restoring a missing file. Keep the old checkout and its backups. With Discord closed, you may then copy its `groups.json` into the release installation's `state` directory.

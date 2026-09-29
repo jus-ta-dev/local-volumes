@@ -6,7 +6,7 @@ Release downloads are hosted on GitHub at `jus-ta-dev/local-volumes`. The websit
 
 1. Update `package.json` and the root package in `package-lock.json` to the same version.
 2. Update the README's versioned release links and install commands.
-3. Review compatibility and the runtime hashes in `release/`. Do not add untested compatibility hashes.
+3. Review the runtime download hashes in `release/runtime.json`. There is no Discord version or build-hash allowlist to maintain. Test the stock-loader install, reinstall after a Discord update, and uninstall paths.
 4. Run `npm ci --ignore-scripts` and `npm run release`.
 5. Review the exact files in `dist/release/upload/`.
 
@@ -20,8 +20,8 @@ After reviewing and committing the source, push `main` and a matching `v` tag:
 
 ```sh
 git push origin main
-git tag v0.1.0-beta.6
-git push origin v0.1.0-beta.6
+git tag v0.1.0-beta.7
+git push origin v0.1.0-beta.7
 ```
 
 The GitHub workflow runs tests and release checks on macOS and Windows. Both jobs must succeed before publishing. A tag containing a hyphen creates a prerelease; a stable version creates a regular release. The tag must match `package.json`.

@@ -22,14 +22,6 @@ import {
 import { assertPlainPath, atomicWrite as atomic } from "../files.ts";
 export { assertPlainPath } from "../files.ts";
 
-export interface Build {
-  platform: string;
-  channel: string;
-  hostVersion: string;
-  hostSha256: string;
-  coreSha256: string;
-  entrySha256: string;
-}
 export interface Candidate {
   hostVersion: string;
   host: string;
@@ -40,8 +32,6 @@ export interface Manifest {
   schema: 1;
   version: string;
   files: Record<string, string>;
-  builds: Build[];
-  experimentalWindows?: boolean;
 }
 export const payloadFiles = [
   "bootstrap.cjs",
@@ -105,9 +95,7 @@ export function discoverCandidates(
         .sort(
           (a, b) => Number(b.split("-").at(-1)) - Number(a.split("-").at(-1)),
         );
-      for (const module of platform === "win32"
-        ? coreModules.slice(0, 1)
-        : coreModules) {
+      for (const module of coreModules.slice(0, 1)) {
         const coreRoot = join(modules, module, "discord_desktop_core");
         const candidate = {
           hostVersion,
@@ -131,17 +119,11 @@ export function readManifest(packageDir: string): Manifest {
     !manifest ||
     manifest.schema !== 1 ||
     !/^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/.test(manifest.version) ||
-    !Array.isArray(manifest.builds) ||
     !manifest.files ||
     Object.keys(manifest.files).sort().join(",") !==
       [...payloadFiles].sort().join(",")
   )
     throw new Error("Invalid release manifest.");
-  if (
-    manifest.experimentalWindows !== undefined &&
-    typeof manifest.experimentalWindows !== "boolean"
-  )
-    throw new Error("Invalid Windows compatibility policy.");
   for (const file of payloadFiles) {
     assertPlainPath(join(packageDir, file));
     if (
@@ -149,15 +131,6 @@ export function readManifest(packageDir: string): Manifest {
       sha(join(packageDir, file)) !== manifest.files[file]
     )
       throw new Error(`Release checksum mismatch: ${file}`);
-  }
-  for (const b of manifest.builds) {
-    if (
-      !["darwin", "win32"].includes(b.platform) ||
-      b.channel !== "stable" ||
-      !/^\d+(\.\d+)+$/.test(b.hostVersion) ||
-      ![b.hostSha256, b.coreSha256, b.entrySha256].every(isHash)
-    )
-      throw new Error("Invalid compatibility entry.");
   }
   return manifest;
 }
@@ -170,102 +143,54 @@ function compareVersions(a: string, b: string): number {
   }
   return 0;
 }
-export function selectCompatible(
+export function selectInstallation(
   candidates: Candidate[],
-  manifest: Manifest,
   platform: string,
   receipt?: Receipt,
-): { candidate: Candidate; build: Build; experimental?: boolean } {
-  const matches: {
-    candidate: Candidate;
-    build: Build;
-    experimental?: boolean;
-  }[] = [];
-  const latest =
-    platform === "win32"
-      ? candidates
-          .map((c) => c.hostVersion)
-          .sort(compareVersions)
-          .at(-1)
-      : undefined;
-  for (const c of candidates.filter(
-    (c) => !latest || compareVersions(c.hostVersion, latest) === 0,
-  )) {
-    for (const path of [c.host, c.core, c.entry]) assertPlainPath(path);
-    let build = manifest.builds.find(
-      (b) =>
-        b.platform === platform &&
-        b.hostVersion === c.hostVersion &&
-        b.hostSha256 === sha(c.host) &&
-        b.coreSha256 === sha(c.core),
-    );
-    let experimental = false;
-    if (!build && platform === "win32" && manifest.experimentalWindows) {
-      const packagePath = join(dirname(c.entry), "package.json");
-      assertPlainPath(packagePath);
-      const pkg = existsSync(packagePath)
-        ? JSON.parse(readFileSync(packagePath, "utf8"))
-        : undefined;
-      if (
-        !pkg ||
-        (pkg.main !== undefined &&
-          !["index.js", "./index.js"].includes(pkg.main))
-      )
-        throw new Error(
-          "Unrecognized Windows desktop-core entry point. No files were patched.",
-        );
-      const current = sha(c.entry);
-      const original =
-        receipt?.target === c.entry && current === receipt.patchedHash
-          ? receipt.original
-          : readFileSync(c.entry, "utf8");
-      // Accept only the stock forwarding loader, never arbitrary existing mods.
-      if (
-        original.length > 4096 ||
-        !/^\uFEFF?\s*module\.exports\s*=\s*require\((['"])\.\/core\.asar\1\)\s*;?\s*$/.test(
-          original,
-        )
-      )
-        throw new Error(
-          "Discord already has a modified or unrecognized entry. Remove the existing mod with its own uninstaller first.",
-        );
-      build = {
-        platform: "win32",
-        channel: "stable",
-        hostVersion: c.hostVersion,
-        hostSha256: sha(c.host),
-        coreSha256: sha(c.core),
-        entrySha256: hash(original),
-      };
-      experimental = true;
-    }
-    if (!build) continue;
-    const current = sha(c.entry);
-    if (
-      current !== build.entrySha256 &&
-      !(
-        receipt &&
-        receipt.target === c.entry &&
-        receipt.originalHash === build.entrySha256 &&
-        current === receipt.patchedHash
-      )
-    )
-      throw new Error(
-        "Discord already has a modified entry. Remove the existing mod with its own uninstaller first.",
-      );
-    matches.push({
-      candidate: c,
-      build,
-      ...(experimental ? { experimental: true } : {}),
-    });
-  }
+): { candidate: Candidate; entrySha256: string } {
+  if (!["darwin", "win32"].includes(platform))
+    throw new Error("Only macOS and Windows are supported by this installer.");
+  // Versions locate the current installation; they never gate compatibility.
+  const latest = candidates
+    .map((c) => c.hostVersion)
+    .sort(compareVersions)
+    .at(-1);
+  const matches = candidates.filter(
+    (c) => latest !== undefined && compareVersions(c.hostVersion, latest) === 0,
+  );
   if (matches.length !== 1)
     throw new Error(
       matches.length
-        ? "More than one compatible Discord installation found; refusing to choose."
-        : `No verified ${platform === "win32" ? "Windows" : "macOS"} Discord build matches this release. Nothing was patched. Run diagnose to report version and file hashes.`,
+        ? "More than one current Discord installation found; refusing to choose."
+        : "No Discord Stable desktop-core installation found. Nothing was patched.",
     );
-  return matches[0];
+  const candidate = matches[0];
+  for (const path of [candidate.host, candidate.core, candidate.entry])
+    assertPlainPath(path);
+  const packagePath = join(dirname(candidate.entry), "package.json");
+  assertPlainPath(packagePath);
+  const pkg = existsSync(packagePath)
+    ? JSON.parse(readFileSync(packagePath, "utf8"))
+    : undefined;
+  if (
+    !pkg ||
+    (pkg.main !== undefined && !["index.js", "./index.js"].includes(pkg.main))
+  )
+    throw new Error("Unrecognized desktop-core entry point. No files were patched.");
+  const current = sha(candidate.entry);
+  const original =
+    receipt?.target === candidate.entry && current === receipt.patchedHash
+      ? receipt.original
+      : readFileSync(candidate.entry, "utf8");
+  // Preserve other mods and keep a reversible loader patch, without build pins.
+  if (
+    original.length > 4096 ||
+    !/^\uFEFF?\s*module\.exports\s*=\s*require\((['"])\.\/core\.asar\1\)\s*;?\s*$/.test(original)
+  )
+    throw new Error(
+      "Discord already has a modified or unrecognized entry. Remove the existing mod with its own uninstaller first.",
+    );
+  return { candidate, entrySha256: hash(original) };
 }
 export function assertDiscordClosed(platform: string) {
   if (platform === "darwin") {
@@ -332,16 +257,11 @@ export function installRelease(options: SetupOptions): string {
       join(root, platform === "darwin" ? "uninstall.sh" : "uninstall.ps1"),
     );
     const receipt = readReceipt(receiptPath);
-    const { candidate, build, experimental } = selectCompatible(
+    const { candidate, entrySha256 } = selectInstallation(
       candidates,
-      manifest,
       platform,
       receipt,
     );
-    if (receipt && receipt.target !== candidate.entry)
-      throw new Error(
-        "Discord moved since the previous install. Uninstall that entry before installing into a new one.",
-      );
     const releaseId = `${manifest.version}-${sha(join(packageDir, "manifest.json")).slice(0, 16)}`;
     const releaseDir = join(root, "releases", releaseId);
     assertPlainPath(releaseDir);
@@ -414,7 +334,7 @@ export function installRelease(options: SetupOptions): string {
         candidate.entry,
         join(root, "loader.cjs"),
         receiptPath,
-        build.entrySha256,
+        entrySha256,
       );
     } catch (error) {
       if (previous) atomic(activePath, previous);
@@ -434,7 +354,7 @@ export function installRelease(options: SetupOptions): string {
         `& ${psQuote(node)} ${psQuote(join(root, "manage.cjs"))} uninstall\nexit $LASTEXITCODE\n`,
       );
     }
-    return `Local Volumes ${manifest.version} installed.${experimental ? " Experimental Windows build: live voice testing is pending." : ""} Start Discord, then open Output Options → Local Volumes. Settings: ${join(root, "state")}`;
+    return `Local Volumes ${manifest.version} installed. Start Discord, then open Output Options → Local Volumes. Settings: ${join(root, "state")}`;
   });
 }
 export function uninstallRelease(

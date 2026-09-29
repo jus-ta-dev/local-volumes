@@ -1,12 +1,13 @@
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { realpathSync } from "node:fs";
+import { readReceipt } from "./install/transaction.ts";
 import {
   dataRoot,
   discoverCandidates,
   diagnose,
   readManifest,
-  selectCompatible,
+  selectInstallation,
   assertDiscordClosed,
   installRelease,
   uninstallRelease,
@@ -37,8 +38,15 @@ try {
         JSON.stringify(diagnose(candidates, process.platform), null, 2),
       );
     else if (command === "check") {
-      selectCompatible(candidates, readManifest(__dirname), process.platform);
-      console.log("Compatible Discord build found. No files changed.");
+      readManifest(__dirname);
+      selectInstallation(
+        candidates,
+        process.platform,
+        readReceipt(resolve(root, "state/install.json")),
+      );
+      console.log(
+        "Discord loader found. No files changed. Voice compatibility is determined when Discord runs.",
+      );
     } else {
       const runtime = realpathSync(process.execPath);
       console.log(

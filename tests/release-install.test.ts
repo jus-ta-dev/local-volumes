@@ -9,6 +9,7 @@ import {
   rmSync,
   existsSync,
   symlinkSync,
+  readdirSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -17,7 +18,7 @@ import {
   dataRoot,
   discoverCandidates,
   readManifest,
-  selectCompatible,
+  selectInstallation,
   installRelease,
   uninstallRelease,
   diagnose,
@@ -55,6 +56,7 @@ function fixture(platform = "darwin") {
     mkdirSync(join(path, ".."), { recursive: true });
     writeFileSync(path, value);
   }
+  writeFileSync(join(entry, "..", "package.json"), '{"main":"index.js"}');
   const packageDir = join(dir, "package");
   mkdirSync(packageDir);
   const files = {
@@ -74,16 +76,6 @@ function fixture(platform = "darwin") {
     schema: 1,
     version: "0.1.0-beta.1",
     files,
-    builds: [
-      {
-        platform,
-        channel: "stable",
-        hostVersion: "0.0.412",
-        hostSha256: hash("host fixture"),
-        coreSha256: hash("core fixture"),
-        entrySha256: hash(original),
-      },
-    ],
   };
   const saveManifest = () =>
     writeFileSync(join(packageDir, "manifest.json"), JSON.stringify(manifest));
@@ -159,13 +151,9 @@ for (const platform of ["darwin", "win32"])
       f.close();
     }
   });
-test("unsupported builds, existing modifications, and running Discord do not get patched", () => {
+test("existing modifications and running Discord do not get patched", () => {
   const f = fixture();
   try {
-    writeFileSync(f.core, "new Discord build");
-    assert.throws(() => installRelease(f.options), /No verified/);
-    assert.equal(readFileSync(f.entry, "utf8"), f.original);
-    writeFileSync(f.core, "core fixture");
     writeFileSync(f.entry, "another mod");
     assert.throws(() => installRelease(f.options), /existing mod/);
     assert.equal(readFileSync(f.entry, "utf8"), "another mod");
@@ -181,11 +169,6 @@ test("unsupported builds, existing modifications, and running Discord do not get
       /running/,
     );
     assert.equal(readFileSync(f.entry, "utf8"), f.original);
-    assert.throws(
-      () =>
-        selectCompatible([f.candidate], { ...f.manifest, builds: [] }, "win32"),
-      /No verified Windows/,
-    );
   } finally {
     f.close();
   }
@@ -213,14 +196,16 @@ test("changed installed entry, missing target and concurrent installer never cau
     assert.equal(readFileSync(f.entry, "utf8"), "Discord updater changed this");
     rmSync(f.entry);
     assert.match(installationStatus(f.root), /moved or disappeared/);
-    assert.throws(() => uninstallRelease(f.root, () => {}));
+    uninstallRelease(f.root, () => {});
+    assert.equal(existsSync(f.entry), false);
+    assert.equal(JSON.parse(readFileSync(join(f.root, "state/install.json"), "utf8")).status, "uninstalled");
     mkdirSync(join(f.root, ".install-lock"));
     assert.throws(() => installRelease(f.options), /Another installer/);
   } finally {
     f.close();
   }
 });
-test("compatibility report contains no user paths or account data", () => {
+test("diagnostic report contains no user paths or account data", () => {
   const f = fixture("win32");
   try {
     const report = JSON.stringify(diagnose([f.candidate], "win32"));
@@ -254,111 +239,137 @@ test(
   },
 );
 
-test("experimental Windows installs an unlisted stock loader and restores it exactly", () => {
-  const f = fixture("win32");
-  try {
-    f.manifest.builds = [];
-    f.manifest.experimentalWindows = true;
-    f.saveManifest();
-    writeFileSync(
-      join(f.entry, "..", "package.json"),
-      JSON.stringify({ name: "discord_desktop_core", main: "index.js" }),
-    );
-    assert.match(installRelease(f.options), /Experimental Windows/);
-    const patched = readFileSync(f.entry, "utf8");
-    installRelease(f.options);
-    assert.equal(readFileSync(f.entry, "utf8"), patched);
-    uninstallRelease(f.root, () => {});
-    assert.equal(readFileSync(f.entry, "utf8"), f.original);
-  } finally {
-    f.close();
-  }
-});
-test("experimental Windows accepts stock quote/newline variants, but refuses extra code", () => {
-  const f = fixture("win32");
-  try {
-    f.manifest.builds = [];
-    f.manifest.experimentalWindows = true;
-    writeFileSync(join(f.entry, "..", "package.json"), '{"main":"./index.js"}');
-    for (const original of [
-      f.original,
-      'module.exports = require("./core.asar");\n',
-      "\uFEFFmodule.exports=require('./core.asar');\r\n",
-    ]) {
-      writeFileSync(f.entry, original);
-      assert.equal(
-        selectCompatible([f.candidate], f.manifest, "win32").build.entrySha256,
-        hash(original),
-      );
+for (const platform of ["darwin", "win32"]) {
+  test(`${platform}: installs an arbitrary Discord version with changed host and core files`, () => {
+    const f = fixture(platform);
+    try {
+      writeFileSync(f.host, "unlisted host build");
+      writeFileSync(f.core, "unlisted core build");
+      f.candidate.hostVersion = "99.7.1";
+      assert.match(installRelease(f.options), /installed/);
+      assert.match(readFileSync(f.entry, "utf8"), /Local Volumes/);
+      uninstallRelease(f.root, () => {});
+      assert.equal(readFileSync(f.entry, "utf8"), f.original);
+    } finally {
+      f.close();
     }
-    for (const modified of [
-      "require('./another-mod');\n" + f.original,
-      f.original + "doSomething();",
-      'module.exports=require("../core.asar");',
-    ]) {
-      writeFileSync(f.entry, modified);
+  });
+
+  test(`${platform}: accepts stock quote/newline variants, but refuses extra code`, () => {
+    const f = fixture(platform);
+    try {
+      writeFileSync(join(f.entry, "..", "package.json"), '{"main":"./index.js"}');
+      for (const original of [
+        f.original,
+        'module.exports = require("./core.asar");\n',
+        "\uFEFFmodule.exports=require('./core.asar');\r\n",
+      ]) {
+        writeFileSync(f.entry, original);
+        assert.equal(
+          selectInstallation([f.candidate], platform).entrySha256,
+          hash(original),
+        );
+      }
+      for (const modified of [
+        "require('./another-mod');\n" + f.original,
+        f.original + "doSomething();",
+        'module.exports=require("../core.asar");',
+      ]) {
+        writeFileSync(f.entry, modified);
+        assert.throws(
+          () => selectInstallation([f.candidate], platform),
+          /modified or unrecognized/,
+        );
+        assert.equal(readFileSync(f.entry, "utf8"), modified);
+      }
+    } finally {
+      f.close();
+    }
+  });
+
+  test(`${platform}: chooses the latest installation numerically and rejects ambiguity`, () => {
+    const f = fixture(platform);
+    try {
+      const older = { ...f.candidate, hostVersion: "1.0.9" },
+        latest = { ...f.candidate, hostVersion: "1.0.10" };
+      assert.equal(selectInstallation([older, latest], platform).candidate, latest);
       assert.throws(
-        () => selectCompatible([f.candidate], f.manifest, "win32"),
-        /modified or unrecognized/,
+        () => selectInstallation([latest, { ...latest }], platform),
+        /More than one/,
       );
-      assert.equal(readFileSync(f.entry, "utf8"), modified);
+      assert.throws(() => selectInstallation([], platform), /No Discord Stable/);
+    } finally {
+      f.close();
     }
-  } finally {
-    f.close();
-  }
-});
-test("experimental Windows chooses the latest numeric host version, never an older matching one", () => {
-  const f = fixture("win32");
-  try {
-    f.manifest.builds = [];
-    f.manifest.experimentalWindows = true;
-    writeFileSync(join(f.entry, "..", "package.json"), '{"main":"index.js"}');
-    const older = { ...f.candidate, hostVersion: "1.0.9" },
-      latest = { ...f.candidate, hostVersion: "1.0.10" };
-    assert.equal(
-      selectCompatible([latest, older], f.manifest, "win32").candidate,
-      latest,
-    );
-    assert.throws(
-      () => selectCompatible([latest, { ...latest }], f.manifest, "win32"),
-      /More than one/,
-    );
-  } finally {
-    f.close();
-  }
-});
-test("experimental Windows does not weaken Mac checks or accept a different package entry point", () => {
-  const f = fixture("win32");
-  try {
-    f.manifest.builds = [];
-    f.manifest.experimentalWindows = true;
-    assert.throws(
-      () => selectCompatible([f.candidate], f.manifest, "darwin"),
-      /No verified macOS/,
-    );
-    assert.throws(
-      () => selectCompatible([f.candidate], f.manifest, "win32"),
-      /entry point/,
-    );
-    writeFileSync(join(f.entry, "..", "package.json"), '{"main":"other.js"}');
-    assert.throws(
-      () => selectCompatible([f.candidate], f.manifest, "win32"),
-      /entry point/,
-    );
-    f.saveManifest();
-    const raw = JSON.parse(
-      readFileSync(join(f.packageDir, "manifest.json"), "utf8"),
-    );
-    raw.experimentalWindows = "true";
-    writeFileSync(join(f.packageDir, "manifest.json"), JSON.stringify(raw));
-    assert.throws(
-      () => readManifest(f.packageDir),
-      /Windows compatibility policy/,
-    );
-  } finally {
-    f.close();
-  }
-});
+  });
+
+  test(`${platform}: refuses a missing or different package entry point`, () => {
+    const f = fixture(platform);
+    try {
+      const packagePath = join(f.entry, "..", "package.json");
+      rmSync(packagePath);
+      assert.throws(() => selectInstallation([f.candidate], platform), /entry point/);
+      writeFileSync(packagePath, '{"main":"other.js"}');
+      assert.throws(() => selectInstallation([f.candidate], platform), /entry point/);
+      assert.equal(readFileSync(f.entry, "utf8"), f.original);
+    } finally {
+      f.close();
+    }
+  });
+
+  for (const oldRemoved of [false, true])
+    test(`${platform}: reinstalls after an update with the old loader ${oldRemoved ? "removed" : "retained"}`, () => {
+      const f = fixture(platform);
+      try {
+        installRelease(f.options);
+        const groups = join(f.root, "state/groups.json");
+        writeFileSync(groups, '{"keep":"groups and shortcuts"}');
+        const oldReceipt = readFileSync(join(f.root, "state/install.json"));
+        if (oldRemoved) rmSync(f.app, { recursive: true });
+        const app = f.app.replace("app-0.0.412", "app-0.0.413");
+        const coreRoot = join(app, "modules/discord_desktop_core-2/discord_desktop_core");
+        const core = join(coreRoot, "core.asar"), entry = join(coreRoot, "index.js");
+        const host = platform === "darwin" ? f.host : join(app, "resources/app.asar");
+        for (const [path, value] of [
+          [host, "updated host"], [core, "updated core"], [entry, f.original],
+          [join(coreRoot, "package.json"), '{"main":"index.js"}'],
+        ]) {
+          mkdirSync(join(path, ".."), { recursive: true });
+          writeFileSync(path, value);
+        }
+        const candidates = discoverCandidates(platform, f.home, f.local, f.applications);
+        installRelease({ ...f.options, candidates });
+        assert.match(readFileSync(entry, "utf8"), /Local Volumes/);
+        if (!oldRemoved) assert.equal(readFileSync(f.entry, "utf8"), f.original);
+        assert.equal(JSON.parse(readFileSync(join(f.root, "state/install.json"), "utf8")).target, entry);
+        const history = join(f.root, "state", `${hash(oldReceipt)}.install.json.backup`);
+        assert.deepEqual(readFileSync(history), oldReceipt);
+        assert.equal(readFileSync(groups, "utf8"), '{"keep":"groups and shortcuts"}');
+        uninstallRelease(f.root, () => {});
+        assert.equal(readFileSync(entry, "utf8"), f.original);
+        assert.equal(readFileSync(groups, "utf8"), '{"keep":"groups and shortcuts"}');
+      } finally {
+        f.close();
+      }
+    });
+
+  test(`${platform}: reinstalls when an update replaces the loader in place`, () => {
+    const f = fixture(platform);
+    try {
+      installRelease(f.options);
+      const original = 'module.exports = require("./core.asar");\n';
+      writeFileSync(f.entry, original);
+      writeFileSync(f.core, "updated core");
+      installRelease(f.options);
+      assert.match(readFileSync(f.entry, "utf8"), /Local Volumes/);
+      assert.ok(readdirSync(join(f.root, "state")).some((name) => name.endsWith(".install.json.backup")));
+      uninstallRelease(f.root, () => {});
+      assert.equal(readFileSync(f.entry, "utf8"), original);
+    } finally {
+      f.close();
+    }
+  });
+}
 
 test(
   "dangling active-release links are rejected before Discord is modified",

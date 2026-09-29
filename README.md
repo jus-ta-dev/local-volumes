@@ -6,9 +6,9 @@ Local Volumes adds group volume controls to Discord desktop. Put people into gro
 
 Free for noncommercial use. Windows and macOS beta.
 
-[Project website](https://just-a.dev/local-volumes/) · [Download beta 6](https://github.com/jus-ta-dev/local-volumes/releases/tag/v0.1.0-beta.6) · [Report a bug](https://github.com/jus-ta-dev/local-volumes/issues) · [License](LICENSE)
+[Project website](https://just-a.dev/local-volumes/) · [Download beta 7](https://github.com/jus-ta-dev/local-volumes/releases/tag/v0.1.0-beta.7) · [Report a bug](https://github.com/jus-ta-dev/local-volumes/issues) · [License](LICENSE)
 
-Beta 6 fixes the Windows PowerShell install command for downloads from GitHub Releases. The project now lives under the [jus-ta-dev GitHub account](https://github.com/jus-ta-dev).
+Beta 7 removes Discord version and build-hash restrictions on macOS and Windows. After a Discord update removes Local Volumes, fully quit Discord and rerun the installer to restore it while keeping your groups and shortcuts.
 
 ## What it does
 
@@ -32,7 +32,7 @@ Fully quit Discord first, including its system-tray icon on Windows. Reopen it a
 Open **PowerShell** as your normal user and run:
 
 ```powershell
-& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.6/install.ps1').RawContentStream.ToArray()))) -Action install
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString((Invoke-WebRequest -UseBasicParsing 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.7/install.ps1').RawContentStream.ToArray()))) -Action install
 ```
 
 ### macOS
@@ -40,22 +40,20 @@ Open **PowerShell** as your normal user and run:
 Open **Terminal** and run:
 
 ```sh
-curl -fsSL 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.6/install.sh' | bash
+curl -fsSL 'https://github.com/jus-ta-dev/local-volumes/releases/download/v0.1.0-beta.7/install.sh' | bash
 ```
 
 No separate Node.js installation, administrator rights, or PowerShell execution-policy changes are needed. The installers download the release from GitHub and a private Node.js runtime from nodejs.org, then verify their checksums. You can inspect the scripts and download the ZIP yourself from [Releases](https://github.com/jus-ta-dev/local-volumes/releases).
-
-The published beta 6 installers predate the account rename and still use the former GitHub path internally. GitHub currently redirects that path to this repository. A new versioned release is needed to remove it from the installer assets.
 
 ### Supported clients
 
 | Platform                               | Support                                                            |
 | -------------------------------------- | ------------------------------------------------------------------ |
-| Windows x64 / ARM64                    | Experimental; requires Discord Stable's stock desktop-core loader  |
-| macOS                                  | Only the inspected Discord Stable **0.0.412** host and core hashes |
+| Windows x64 / ARM64                    | Discord Stable; requires the stock desktop-core loader             |
+| macOS                                  | Discord Stable; requires the stock desktop-core loader             |
 | Linux, browser, mobile, PTB and Canary | Not supported                                                      |
 
-The installer refuses unsupported or already modified loaders. Discord updates can break compatibility. This is an unofficial client modification, is not endorsed by Discord, and may violate [Discord's terms](https://discord.com/terms).
+The installer does not restrict Discord versions or pin Discord build hashes. It requires the stock desktop-core loader and preserves other mods instead of overwriting them. Discord updates can remove Local Volumes or change its internal voice controls; rerun the installer to restore the loading hook. Installation does not guarantee that the mixer works with every Discord build. This is an unofficial client modification, is not endorsed by Discord, and may violate [Discord's terms](https://discord.com/terms).
 
 ## Use it
 
@@ -72,7 +70,7 @@ You can change the shortcut at the bottom of the mixer. It works while Discord i
 
 ## Update or uninstall
 
-Updates are manual. Fully quit Discord and run the install command from the new release. Existing installer-based groups and shortcuts are kept, including when updating from a website-hosted beta.
+Updates are manual. Fully quit Discord and run the install command from the new release. If a Discord update removes Local Volumes, rerun the same installer. It selects the current installation, retires the previous hook when it is still present, and keeps existing groups, shortcuts, receipts and backups, including when updating from a website-hosted beta.
 
 To uninstall, fully quit Discord, then run:
 
@@ -96,7 +94,7 @@ Uninstall works offline and restores the original loader when it still matches t
 
 Local Volumes does not record voice, read messages, collect Discord tokens, or send telemetry. Names and avatar references come from Discord's cached profiles; pictures load from Discord's CDN. Saved settings contain group names, user IDs, volume levels, and your shortcut.
 
-If the mixer reports a playback error, use **Retry** to restore levels. If restoration fails, fully quit Discord. If an install check fails, report the error instead of bypassing it. Please leave tokens, private settings, and personal data out of bug reports.
+If the mixer reports a playback error, use **Retry** to restore levels. If restoration fails, fully quit Discord. If the loader check fails, report the error instead of overwriting the changed file. Please leave tokens, private settings, and personal data out of bug reports.
 
 See [troubleshooting and local file locations](docs/troubleshooting.md) for more help.
 
